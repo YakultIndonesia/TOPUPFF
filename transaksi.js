@@ -1,74 +1,76 @@
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", function () {
     const urlParams = new URLSearchParams(window.location.search);
-    const game = urlParams.get("game");
+    const gameCode = urlParams.get("game");
+    const gameTitle = document.getElementById("game-title");
+    const productList = document.getElementById("product-list");
+    const paymentMethod = document.getElementById("payment-method");
+    const userIdInput = document.getElementById("user-id");
+    const submitBtn = document.getElementById("submit-btn");
 
-    if (!game) {
-        alert("Game tidak ditemukan.");
+    if (!gameCode) {
+        alert("Game tidak terdeteksi!");
         window.location.href = "index.html";
-        return;
+    } else {
+        gameTitle.innerText = gameCode.toUpperCase();
+        loadProducts(gameCode);
     }
 
-    document.getElementById("game-title").innerText = game.replace("-", " ").toUpperCase();
-
-    const produkList = document.getElementById("produk-list");
-
-    try {
-        const response = await fetch("https://todagames.id/api/v1/service");
-        const data = await response.json();
-
-        const produkGame = data.filter(item => item.game === game);
-        produkGame.forEach(produk => {
-            let btn = document.createElement("button");
-            btn.textContent = `${produk.nama} - Rp${produk.harga}`;
-            btn.onclick = () => pilihProduk(produk);
-            produkList.appendChild(btn);
-        });
-    } catch (error) {
-        console.error("Gagal mengambil data produk:", error);
+    function loadProducts(game) {
+        fetch("https://todagames.id/api/v1/service")
+            .then(response => response.json())
+            .then(data => {
+                const gameData = data.find(item => item.code === game);
+                if (!gameData) {
+                    alert("Produk tidak ditemukan!");
+                    window.location.href = "index.html";
+                } else {
+                    productList.innerHTML = "";
+                    gameData.products.forEach(product => {
+                        const option = document.createElement("option");
+                        option.value = product.id;
+                        option.innerText = `${product.name} - Rp${product.price}`;
+                        productList.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => console.error("Gagal memuat produk:", error));
     }
 
-    document.getElementById("beli-sekarang").addEventListener("click", lakukanPembelian);
-});
+    submitBtn.addEventListener("click", function () {
+        const userId = userIdInput.value.trim();
+        const productId = productList.value;
+        const payment = paymentMethod.value;
 
-function pilihProduk(produk) {
-    localStorage.setItem("produk", JSON.stringify(produk));
-    alert(`Dipilih: ${produk.nama}`);
-}
-
-async function lakukanPembelian() {
-    const userId = document.getElementById("user-id").value;
-    const metodePembayaran = document.getElementById("metode-pembayaran").value;
-    const produk = JSON.parse(localStorage.getItem("produk"));
-
-    if (!userId || !produk) {
-        alert("ID pemain atau produk belum dipilih.");
-        return;
-    }
-
-    const orderData = {
-        member_code: "TDGdCyOxYvGq",
-        key: "HiKiTJTjQZiNhpTUpxVOjOefluYDwq",
-        game: produk.game,
-        produk: produk.id,
-        user_id: userId,
-        payment: metodePembayaran
-    };
-
-    try {
-        const response = await fetch("https://todagames.id/api/v1/order", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(orderData)
-        });
-        const result = await response.json();
-
-        if (result.success) {
-            alert("Pesanan berhasil! Cek status pembayaran.");
-            window.location.href = `status.html?order_id=${result.order_id}`;
-        } else {
-            alert("Gagal melakukan pembelian.");
+        if (!userId || !productId || !payment) {
+            alert("ID pemain, produk, atau metode pembayaran belum dipilih.");
+            return;
         }
-    } catch (error) {
-        console.error("Gagal memproses transaksi:", error);
-    }
-}
+
+        const orderData = {
+            memberCode: "TDGdCyOxYvGq",
+            apiKey: "HiKiTJTjQZiNhpTUpxVOjOefluYDwq",
+            game: gameCode,
+            userId: userId,
+            productId: productId,
+            payment: payment
+        };
+
+        fetch("https://todagames.id/api/v1/order", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(orderData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("Transaksi berhasil! ID Pesanan: " + data.order_id);
+                window.location.href = "status.html?order_id=" + data.order_id;
+            } else {
+                alert("Transaksi gagal: " + data.message);
+            }
+        })
+        .catch(error => console.error("Gagal mengirim transaksi:", error));
+    });
+});
