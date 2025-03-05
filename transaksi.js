@@ -1,76 +1,73 @@
-document.addEventListener("DOMContentLoaded", function () {
-    const urlParams = new URLSearchParams(window.location.search);
-    const gameCode = urlParams.get("game");
-    const gameTitle = document.getElementById("game-title");
-    const productList = document.getElementById("product-list");
-    const paymentMethod = document.getElementById("payment-method");
-    const userIdInput = document.getElementById("user-id");
-    const submitBtn = document.getElementById("submit-btn");
+const ORDER_URL = "https://todagames.id/api/v1/order";
+const STATUS_URL = "https://todagames.id/api/v1/status";
 
-    if (!gameCode) {
-        alert("Game tidak terdeteksi!");
-        window.location.href = "index.html";
-    } else {
-        gameTitle.innerText = gameCode.toUpperCase();
-        loadProducts(gameCode);
+async function placeOrder() {
+    const selectedProduct = JSON.parse(localStorage.getItem("selectedProduct"));
+    const userID = document.getElementById("user-id").value;
+    const zoneID = document.getElementById("zone-id").value || "1";
+
+    if (!selectedProduct || !userID) {
+        alert("Mohon isi ID game dan pilih produk.");
+        return;
     }
 
-    function loadProducts(game) {
-        fetch("https://todagames.id/api/v1/service")
-            .then(response => response.json())
-            .then(data => {
-                const gameData = data.find(item => item.code === game);
-                if (!gameData) {
-                    alert("Produk tidak ditemukan!");
-                    window.location.href = "index.html";
-                } else {
-                    productList.innerHTML = "";
-                    gameData.products.forEach(product => {
-                        const option = document.createElement("option");
-                        option.value = product.id;
-                        option.innerText = `${product.name} - Rp${product.price}`;
-                        productList.appendChild(option);
-                    });
-                }
-            })
-            .catch(error => console.error("Gagal memuat produk:", error));
-    }
+    const requestBody = {
+        user_id: userID,
+        zone_id: zoneID,
+        code: selectedProduct.code,
+    };
 
-    submitBtn.addEventListener("click", function () {
-        const userId = userIdInput.value.trim();
-        const productId = productList.value;
-        const payment = paymentMethod.value;
-
-        if (!userId || !productId || !payment) {
-            alert("ID pemain, produk, atau metode pembayaran belum dipilih.");
-            return;
-        }
-
-        const orderData = {
-            memberCode: "TDGdCyOxYvGq",
-            apiKey: "HiKiTJTjQZiNhpTUpxVOjOefluYDwq",
-            game: gameCode,
-            userId: userId,
-            productId: productId,
-            payment: payment
-        };
-
-        fetch("https://todagames.id/api/v1/order", {
+    try {
+        const response = await fetch(ORDER_URL, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Api-Key": API_KEY,
+                "Member-Code": MEMBER_CODE,
             },
-            body: JSON.stringify(orderData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert("Transaksi berhasil! ID Pesanan: " + data.order_id);
-                window.location.href = "status.html?order_id=" + data.order_id;
-            } else {
-                alert("Transaksi gagal: " + data.message);
-            }
-        })
-        .catch(error => console.error("Gagal mengirim transaksi:", error));
-    });
-});
+            body: JSON.stringify(requestBody),
+        });
+
+        const data = await response.json();
+        if (data.status) {
+            document.getElementById("order-status").innerText = `Pesanan Berhasil: ${data.data.ref_id}`;
+            localStorage.setItem("orderRef", data.data.ref_id);
+        } else {
+            alert(`Gagal: ${data.msg}`);
+        }
+    } catch (error) {
+        console.error("Error:", error);
+    }
+}
+
+async function checkOrderStatus() {
+    const orderRef = localStorage.getItem("orderRef");
+    if (!orderRef) {
+        alert("Tidak ada pesanan untuk dicek.");
+        return;
+    }
+
+    try {
+        const response = await fetch(STATUS_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Api-Key": API_KEY,
+                "Member-Code": MEMBER_CODE,
+            },
+            body: JSON.stringify({ ref_id: orderRef }),
+        });
+
+        const data = await response.json();
+        if (data.status) {
+            document.getElementById("order-status").innerText = `Status: ${data.data.status} - ${data.data.note}`;
+        } else {
+            alert(`Gagal mendapatkan status: ${data.msg}`);
+        }
+    } catch (error) {
+        console.error("Error:", error);
+    }
+}
+
+document.getElementById("order-btn").addEventListener("click", placeOrder);
+document.getElementById("check-status-btn").addEventListener("click", checkOrderStatus);
