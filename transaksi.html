@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaksi</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <a href="index.html">⬅ Kembali</a>
+        <h1>Transaksi Top Up</h1>
+    </header>
+
+    <main>
+        <h2 id="game-title"></h2>
+
+        <label for="user-id">Masukkan ID Pemain:</label>
+        <input type="text" id="user-id" placeholder="Masukkan ID..." required>
+
+        <h3>Pilih Nominal</h3>
+        <div id="produk-list"></div>
+
+        <h3>Pilih Metode Pembayaran</h3>
+        <select id="metode-pembayaran">
+            <option value="dana">Dana</option>
+            <option value="gopay">Gopay</option>
+            <option value="grab-penumpang">Grab</option>
+            <option value="isaku">I-Saku</option>
+            <option value="link-aja">Link Aja</option>
+            <option value="ovo">Ovo</option>
+            <option value="shopee-pay">Shopee Pay</option>
+        </select>
+
+        <button id="beli-sekarang">Beli Sekarang</button>
+    </main>
+
+    <script src="transaksi.js"></script>
+</body>
+</html>
